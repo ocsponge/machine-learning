@@ -110,3 +110,5 @@ def spam_test():
         if classify_nb(test_input,p0v,p1v,pab)!=class_list[index]:
             errorcount+=1
     print('the erorr rate is: %.2f' % (float(errorcount)/len(test_set)))
+
+spam_test()
