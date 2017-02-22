@@ -37,15 +37,15 @@ def smo_simple(data_mat_in, label_mat_in, c, toler, max_iter):
     while(iter < max_iter):
         alpha_pairs_changed = 0
         for i in range(m):
-            yi = multiply(alpha, label_mat).T * \
-                (data_mat * data_mat[i, :].T) + b
-            Ei = yi - label_mat[i]
-            if (((label_mat[i] * Ei <= -toler) and (alpha[i] < c)) or
-                    ((label_mat[i] * Ei >= -toler) and (alpha[i] > 0))):
+            yi = float(multiply(alpha, label_mat).T *
+                       (data_mat * data_mat[i, :].T) + b)
+            Ei = yi - float(label_mat[i])
+            if (((label_mat[i] * Ei < -toler) and (alpha[i] < c)) or
+                    ((label_mat[i] * Ei > toler) and (alpha[i] > 0))):
                 j = select_j_rand(i, m)
-                yj = multiply(alpha, label_mat).T * \
-                    (data_mat * data_mat[j, :].T) + b
-                Ej = yj - label_mat[j]
+                yj = float(multiply(alpha, label_mat).T *
+                           (data_mat * data_mat[j, :].T) + b)
+                Ej = yj - float(label_mat[j])
                 alphai_old = alpha[i].copy()
                 alphaj_old = alpha[j].copy()
                 if label_mat[i] != label_mat[j]:
@@ -57,8 +57,9 @@ def smo_simple(data_mat_in, label_mat_in, c, toler, max_iter):
                 if L == H:
                     print('L==H')
                     continue
-                eta = -data_mat[i, :] * data_mat[i, :].T - data_mat[j, :] * \
-                    data_mat[j, :].T + 2.0 * data_mat[i, :] * data_mat[j, :].T
+                eta = (-data_mat[i, :] * data_mat[i, :].T - data_mat[j, :] *
+                       data_mat[j, :].T + 2.0 * data_mat[i, :] *
+                       data_mat[j, :].T)
                 if eta >= 0:
                     print('eta>=0')
                     continue
@@ -67,8 +68,8 @@ def smo_simple(data_mat_in, label_mat_in, c, toler, max_iter):
                 if abs(alpha[j] - alphaj_old) < 0.00001:
                     print('j not moving enough')
                     continue
-                alpha[i] += label_mat[i] * \
-                    label_mat[j] * (alphaj_old - alpha[j])
+                alpha[i] += (label_mat[i] * label_mat[j] *
+                             (alphaj_old - alpha[j]))
                 b1 = (b - Ei - label_mat[i] * (alpha[i] - alphai_old) *
                       (data_mat[i, :] * data_mat[i, :].T) -
                       label_mat[j] * (alpha[j] - alphaj_old) *
@@ -86,7 +87,7 @@ def smo_simple(data_mat_in, label_mat_in, c, toler, max_iter):
                 alpha_pairs_changed += 1
                 print('iter: %d i: %d, pairs changed %d' %
                       (iter, i, alpha_pairs_changed))
-        if(alpha_pairs_changed == 0):
+        if (alpha_pairs_changed == 0):
             iter += 1
         else:
             iter = 0
