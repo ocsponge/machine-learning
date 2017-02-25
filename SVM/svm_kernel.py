@@ -27,9 +27,24 @@ def clip_alpha(aj, H, L):
     return aj
 
 
+def kernel_trans(X, A, ktype):
+    m, n = shape(X)
+    k = mat(zeros((m, 1)))
+    if ktype[0] = 'lin':
+        k = X * A.T
+    elif ktype[0] = 'rbf':
+        for j in range(m):
+            delta = X[j, :] - A
+            k[j] = delta * delta.T
+        k = exp(k / (-1.0 * ktype[1]**2))
+    else:
+        raise NameError('that kernel is not recognised')
+    return k
+
+
 class data_struct:
 
-    def __init__(self, data_mat, label_mat, c, toler):
+    def __init__(self, data_mat, label_mat, c, toler, ktype):
         self.data = data_mat
         self.label = label_mat
         self.c = c
@@ -38,11 +53,13 @@ class data_struct:
         self.b = 0.0
         self.alpha = mat(zeros((self.m, 1)))
         self.Ecache = mat(zeros((self.m, 2)))
+        self.k = mat(zeros((self.m, self.m)))
+        for i in range(m):
+            self.k[:, i] = kernel_trans(data_mat, data_mat[i], ktype)
 
 
 def calcu_Ek(os, k):
-    yk = (float(multiply(os.label, os.alpha).T *
-                (os.data * os.data[k, :].T)) + os.b)
+    yk = float(multiply(os.label, os.alpha).T * os.k[:, k]) + os.b
     Ek = yk - float(os.label[k])
     return Ek
 
@@ -90,9 +107,7 @@ def innerL(os, i):
         if L == H:
             print('L==H')
             return 0
-        eta = (-2.0 * os.data[i, :] * os.data[j, :].T +
-               os.data[i, :] * os.data[i, :].T +
-               os.data[j, :] * os.data[j, :].T)
+        eta = -2.0 * os.k[i, j] + os.k[i, i] + os.k[j, j]
         if eta <= 0:
             print('eta<=0')
             return 0
@@ -105,13 +120,11 @@ def innerL(os, i):
         os.alpha[i] += os.label[i] * os.label[j] * (alphaj_old - os.alpha[j])
         # update_E(os, i)
         b1 = (os.b - Ei - os.label[i] * (os.alpha[i] - alphai_old) *
-              (os.data[i, :] * os.data[i, :].T) -
-              os.label[j] * (os.alpha[j] - alphaj_old) *
-              (os.data[i, :] * os.data[j, :].T))
+              os.k[i, i] - os.label[j] * (os.alpha[j] - alphaj_old) *
+              os.k[i, j])
         b2 = (os.b - Ej - os.label[i] * (os.alpha[i] - alphai_old) *
-              (os.data[i, :] * os.data[j, :].T) -
-              os.label[j] * (os.alpha[j] - alphaj_old) *
-              (os.data[j, :] * os.data[j, :].T))
+              os.[i, j] - os.label[j] * (os.alpha[j] - alphaj_old) *
+              os.k[j, j])
         if (0 < os.alpha[i]) and (os.alpha[i] < os.c):
             os.b = b1
         elif (0 < os.alpha[j]) and (os.alpha[j] < os.c):
@@ -125,8 +138,9 @@ def innerL(os, i):
         return 0
 
 
-def smo(data_mat_in, label_mat_in, c, toler, max_iter):
-    os = data_struct(mat(data_mat_in), mat(label_mat_in).transpose(), c, toler)
+def smo(data_mat_in, label_mat_in, c, toler, max_iter, ktype):
+    os = data_struct(mat(data_mat_in), mat(label_mat_in).transpose(), c, toler,
+                     ktype)
     iter = 0
     alpha_pairs_changed = 0
     entire_set = True
@@ -163,38 +177,18 @@ def calcu_w(alpha, data_arr, label_arr):
     return w
 
 
-def plot_best_fit(filename, b, alpha):
-    import matplotlib.pyplot as plt
-    data_mat_in, label_mat_in = load_data_set(filename)
-    data_mat = mat(data_mat_in)
-    label_mat = mat(label_mat_in).transpose()
-    n = shape(data_mat)[0]
-    xcord1 = []
-    ycord1 = []
-    xcord2 = []
-    ycord2 = []
-    for i in range(n):
-        if label_mat[i] == 1:
-            xcord1.append(data_mat[i, 0])
-            ycord1.append(data_mat[i, 1])
-        else:
-            xcord2.append(data_mat[i, 0])
-            ycord2.append(data_mat[i, 1])
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.scatter(xcord1, ycord1, s=30, c='red', marker='s')
-    ax.scatter(xcord2, ycord2, s=30, c='green')
-    weights = calcu_w(alpha, data_mat_in, label_mat_in)
-    print(weights)
-    y = arange(-8.0, 6.0, 0.1)
-    x = -(weights[1] * y + b[0]) / weights[0]
-    ax.plot(x, y)
-    ax.axis([-2, 12, -8, 6])
-    plt.show()
+def test_rbf(k1=1.3):
+    data_arr, label_arr = load_data_set('testSetRBF.txt')
+    b, alpha = smo(data_arr, label_arr, 200, 0.0001, 10000, ('rbf', k1))
+    data_mat = mat(data_arr)
+    label_mat = mat(label_arr).transpose()
+    sv_id = nonzero(alpha.A > 0)[0]
+    svs = data_mat[sv_id]
+    sv_label = label_mat[sv_id]
+    print('there are %d support vectors' % shape(svs)[0])
+    m, n = shape(data_mat)
+    errorcount = 0
+    for i in range(m):
 
-
-data_arr, label_arr = load_data_set('testSet.txt')
-b, alpha = smo(data_arr, label_arr, 0.6, 0.001, 40)
-print(b)
-print(alpha[alpha > 0])
-plot_best_fit('testSet.txt', b.getA(), alpha)
+    print(b)
+    print(alpha[alpha > 0])
