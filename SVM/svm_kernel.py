@@ -30,9 +30,9 @@ def clip_alpha(aj, H, L):
 def kernel_trans(X, A, ktype):
     m, n = shape(X)
     k = mat(zeros((m, 1)))
-    if ktype[0] = 'lin':
+    if ktype[0] == 'lin':
         k = X * A.T
-    elif ktype[0] = 'rbf':
+    elif ktype[0] == 'rbf':
         for j in range(m):
             delta = X[j, :] - A
             k[j] = delta * delta.T
@@ -54,7 +54,7 @@ class data_struct:
         self.alpha = mat(zeros((self.m, 1)))
         self.Ecache = mat(zeros((self.m, 2)))
         self.k = mat(zeros((self.m, self.m)))
-        for i in range(m):
+        for i in range(self.m):
             self.k[:, i] = kernel_trans(data_mat, data_mat[i], ktype)
 
 
@@ -123,7 +123,7 @@ def innerL(os, i):
               os.k[i, i] - os.label[j] * (os.alpha[j] - alphaj_old) *
               os.k[i, j])
         b2 = (os.b - Ej - os.label[i] * (os.alpha[i] - alphai_old) *
-              os.[i, j] - os.label[j] * (os.alpha[j] - alphaj_old) *
+              os.k[i, j] - os.label[j] * (os.alpha[j] - alphaj_old) *
               os.k[j, j])
         if (0 < os.alpha[i]) and (os.alpha[i] < os.c):
             os.b = b1
@@ -189,6 +189,79 @@ def test_rbf(k1=1.3):
     m, n = shape(data_mat)
     errorcount = 0
     for i in range(m):
+        kernel_vec = kernel_trans(svs, data_mat[i, :], ('rbf', k1))
+        predict = kernel_vec.T * multiply(alpha[sv_id], sv_label) + b
+        if sign(predict) != sign(label_arr[i]):
+            errorcount += 1
+    print('the training error rate is: %f' % (float(errorcount) / m))
+    data_arr, label_arr = load_data_set('testSetRBF2.txt')
+    data_mat = mat(data_arr)
+    label_mat = mat(label_arr).transpose()
+    m, n = shape(data_mat)
+    errorcount = 0
+    for i in range(m):
+        kernel_vec = kernel_trans(svs, data_mat[i, :], ('rbf', k1))
+        predict = kernel_vec.T * multiply(alpha[sv_id], sv_label) + b
+        if sign(predict) != sign(label_arr[i]):
+            errorcount += 1
+    print('the test error rate is: %f' % (float(errorcount) / m))
 
-    print(b)
-    print(alpha[alpha > 0])
+
+def img2vector(filename):
+    returnvec = zeros((1, 1024))
+    with open(filename) as fr:
+        for i in range(32):
+            line = fr.readline()
+            for j in range(32):
+                returnvec[0, 32 * i + j] = int(line[j])
+        return returnvec
+
+
+def load_images(dirname):
+    from os import listdir
+    hw_labels = []
+    training_list = listdir(dirname)
+    m = len(training_list)
+    training_mat = zeros((m, 1024))
+    for i in range(m):
+        file_name = training_list[i]
+        file_str = file_name.split('.')[0]
+        class_num = int(file_str.split('_')[0])
+        if class_num == 9:
+            hw_labels.append(-1)
+        else:
+            hw_labels.append(1)
+        training_mat[i, :] = img2vector('%s/%s' % (dirname, file_name))
+    return training_mat, hw_labels
+
+
+def test_digits(ktype=('rbf', 10)):
+    data_arr, label_arr = load_images('trainingDigits')
+    b, alpha = smo(data_arr, label_arr, 200, 0.0001, 10000, ktype)
+    data_mat = mat(data_arr)
+    label_mat = mat(label_arr).transpose()
+    sv_id = nonzero(alpha.A > 0)[0]
+    svs = data_mat[sv_id]
+    sv_label = label_mat[sv_id]
+    print('there are %d support vectors' % shape(svs)[0])
+    m, n = shape(data_mat)
+    errorcount = 0
+    for i in range(m):
+        kernel_vec = kernel_trans(svs, data_mat[i, :], ktype)
+        predict = kernel_vec.T * multiply(alpha[sv_id], sv_label) + b
+        if sign(predict) != sign(label_arr[i]):
+            errorcount += 1
+    print('the training error rate is: %f' % (float(errorcount) / m))
+    data_arr, label_arr = load_images('testDigits')
+    data_mat = mat(data_arr)
+    label_mat = mat(label_arr).transpose()
+    m, n = shape(data_mat)
+    errorcount = 0
+    for i in range(m):
+        kernel_vec = kernel_trans(svs, data_mat[i, :], ktype)
+        predict = kernel_vec.T * multiply(alpha[sv_id], sv_label) + b
+        if sign(predict) != sign(label_arr[i]):
+            errorcount += 1
+    print('the test error rate is: %f' % (float(errorcount) / m))
+
+test_digits(ktype=('lin', 0))
