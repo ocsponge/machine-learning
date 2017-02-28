@@ -55,16 +55,16 @@ def adaboost_train_ds(data_arr, class_label, num_iter=40):
     weight_classify = mat(zeros((m, 1)))
     for iter in range(num_iter):
         stump, error, classify = bulid_stump(data_arr, class_label, D)
-        print('D: ', D.T)
+        # print('D: ', D.T)
         alpha = float(0.5 * log((1 - error) / max(error, 1e-16)))
         stump['alpha'] = alpha
         weak_class_arr.append(stump)
-        print('classify: ', classify.T)
+        # print('classify: ', classify.T)
         expo = multiply(-1 * alpha * mat(class_label).T, classify)
         D = multiply(exp(expo), D)
         D = D / D.sum()
         weight_classify += alpha * classify
-        print('weight_classify: ', weight_classify.T)
+        # print('weight_classify: ', weight_classify.T)
         weight_error = multiply(sign(weight_classify) != mat(class_label).T,
                                 ones((m, 1)))
         error_rate = weight_error.sum() / m
@@ -73,5 +73,41 @@ def adaboost_train_ds(data_arr, class_label, num_iter=40):
             break
     return weak_class_arr
 
-data_mat, label_mat = load_simp_data()
-classarr = adaboost_train_ds(data_mat, label_mat, 9)
+
+def ada_classify(data_arr, classify_list):
+    data_mat = mat(data_arr)
+    m = shape(data_mat)[0]
+    result = mat(zeros((m, 1)))
+    for i in range(len(classify_list)):
+        one_classify = stump_classify(
+            data_mat, classify_list[i]['dim'],
+            classify_list[i]['thresh'], classify_list[i]['ineq'])
+        result += classify_list[i]['alpha'] * one_classify
+        print(result)
+    return sign(result)
+
+
+def load_data_set(filename):
+    with open(filename) as ff:
+        num_feature = len(ff.readline().split('\t'))
+    data_mat = []
+    label_mat = []
+    with open(filename) as fr:
+        for line in fr.readlines():
+            one_line = []
+            line_arr = line.strip().split('\t')
+            for i in range(num_feature - 1):
+                one_line.append(float(line_arr[i]))
+            data_mat.append(one_line)
+            label_mat.append(float(line_arr[-1]))
+    return data_mat, label_mat
+
+data_arr, label_arr = load_data_set('horseColicTraining2.txt')
+classarr = adaboost_train_ds(data_arr, label_arr, 1000)
+testarr, testlabel = load_data_set('horseColicTest2.txt')
+predict = ada_classify(testarr, classarr)
+errarr = mat(ones((67, 1)))
+numerr = errarr[predict != mat(testlabel).T].sum()
+errorrate = float(numerr) / 67.0
+print(numerr)
+print(errorrate)
