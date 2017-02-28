@@ -3,7 +3,7 @@
 主要机器学习算法的python代码实现，包括：
 
 ### 分类：
-* k近邻
+* k-近邻
 * 决策树
 * 朴素贝叶斯
 * Logistic回归
@@ -12,10 +12,10 @@
 
 ### 回归
 * Linear Regression
-* 树回归
+* 分类回归树
 
 ### 聚类
-* K均值
+* K-均值
 * Apriori算法
 * FP-growth
 
