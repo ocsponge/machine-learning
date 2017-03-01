@@ -71,7 +71,7 @@ def adaboost_train_ds(data_arr, class_label, num_iter=40):
         print('total error: ', error_rate, '\n')
         if error_rate == 0:
             break
-    return weak_class_arr
+    return weak_class_arr, weight_classify
 
 
 def ada_classify(data_arr, classify_list):
@@ -102,12 +102,43 @@ def load_data_set(filename):
             label_mat.append(float(line_arr[-1]))
     return data_mat, label_mat
 
+
+def plot_roc(predict, class_label):
+    import matplotlib.pyplot as plt
+    cur = (1.0, 1.0)
+    ysum = 0.0
+    num_positive = sum(array(class_label) == 1.0)
+    xstep = 1.0 / float(len(class_label) - num_positive)
+    ystep = 1.0 / float(num_positive)
+    sorted_id = predict.argsort()
+    fig = plt.figure()
+    fig.clf()
+    ax = plt.subplot(111)
+    for i in sorted_id.tolist()[0]:
+        if class_label[i] == 1.0:
+            delx = 0
+            dely = ystep
+        else:
+            delx = xstep
+            dely = 0
+            ysum += cur[1]
+        ax.plot([cur[0], cur[0] - delx], [cur[1], cur[1] - dely], c='b')
+        cur = (cur[0] - delx, cur[1] - dely)
+    ax.plot([0, 1], [0, 1], 'b--')
+    plt.xlabel('false positive rate')
+    plt.ylabel('true positive rate')
+    plt.title('roc curve for adaboost horse colic detection system')
+    ax.axis([0, 1, 0, 1])
+    plt.show()
+    print('the area under curve is: ', ysum * xstep)
+
 data_arr, label_arr = load_data_set('horseColicTraining2.txt')
-classarr = adaboost_train_ds(data_arr, label_arr, 1000)
-testarr, testlabel = load_data_set('horseColicTest2.txt')
+classarr, classify = adaboost_train_ds(data_arr, label_arr, 50)
+plot_roc(classify.T, label_arr)
+'''testarr, testlabel = load_data_set('horseColicTest2.txt')
 predict = ada_classify(testarr, classarr)
 errarr = mat(ones((67, 1)))
 numerr = errarr[predict != mat(testlabel).T].sum()
 errorrate = float(numerr) / 67.0
 print(numerr)
-print(errorrate)
+print(errorrate)'''
