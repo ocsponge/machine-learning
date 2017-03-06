@@ -18,69 +18,74 @@ def load_data_set(filename):
     return data_mat, label_mat
 
 
-def stand_regres(xarr, yarr):
-    xmat = mat(xarr)
-    ymat = mat(yarr).T
+def ridge_regres(xmat, ymat, lamda=0.2):
     xTx = xmat.T * xmat
-    if linalg.det(xTx) == 0:
+    denom = xTx + eye(shape(xmat)[1]) * lamda
+    if linalg.det(denom) == 0:
         print('this matrix is singular, cannot do inverse')
         return
-    ws = xTx.I * xmat.T * ymat
+    ws = denom.I * xmat.T * ymat
     return ws
 
 
-def lwlr(test_point, xarr, yarr, k=1.0):
+def ridge_test(xarr, yarr):
     xmat = mat(xarr)
     ymat = mat(yarr).T
-    m = shape(xmat)[0]
-    w = mat(eye((m)))
-    for i in range(m):
-        diff = test_point - xmat[i, :]
-        w[i, i] = exp(diff * diff.T / (-2.0 * k**2))
-    xTx = xmat.T * w * xmat
-    if linalg.det(xTx) == 0:
-        print('this matrix is singular, cannot do inverse')
-        return
-    ws = xTx.I * xmat.T * w * ymat
-    return test_point * ws
+    ymean = mean(ymat, 0)
+    ymat = ymat - ymean
+    xmean = mean(xmat, 0)
+    xvar = var(xmat, 0)
+    xmat = (xmat - xmean) / xvar
+    num_test = 30
+    wmat = zeros((num_test, shape(xmat)[1]))
+    for i in range(num_test):
+        ws = ridge_regres(xmat, ymat, exp(i - 10))
+        wmat[i, :] = ws.T
+    return wmat
 
 
-def lwlr_test(test_arr, xarr, yarr, k=1.0):
-    m = shape(test_arr)[0]
-    yhat = zeros(m)
-    for i in range(m):
-        yhat[i] = lwlr(test_arr[i], xarr, yarr, k)
-    return yhat
+def regularize(xmat):
+    inxmat = xmat.copy()
+    xmean = mean(inxmat, 0)
+    xvar = var(inxmat, 0)
+    inxmat = (inxmat - xmean) / xvar
+    return inxmat
+
+
+def stage_wise(xarr, yarr, eps=0.01, numit=100):
+    xmat = mat(xarr)
+    ymat = mat(yarr).T
+    ymean = mean(ymat, 0)
+    ymat = ymat - ymean
+    xmat = regularize(xmat)
+    m, n = shape(xmat)
+    ret_ws = zeros((numit, n))
+    ws = zeros((n, 1))
+    ws_max = ws.copy()
+    for i in range(numit):
+        print(ws.T)
+        min_error = inf
+        for j in range(n):
+            for sign in [-1, 1]:
+                ws_test = ws.copy()
+                ws_test[j, :] += eps * sign
+                yhat = xmat * ws_test
+                er = error(ymat.A, yhat.A)
+                if er < min_error:
+                    min_error = er
+                    ws_max = ws_test
+        ws = ws_max.copy()
+        ret_ws[i, :] = ws.T
+    return ret_ws
 
 
 def error(yarr, yhat_arr):
     return ((yarr - yhat_arr)**2).sum()
 
 
-'''xarr, yarr = load_data_set('ex0.txt')
-yhat = lwlr_test(xarr, xarr, yarr, 0.003)
-xmat = mat(xarr)
-ymat = mat(yarr)
+xarr, yarr = load_data_set('abalone.txt')
+ws = stage_wise(xarr, yarr, 0.005, 1000)
 fig = plt.figure()
 ax = fig.add_subplot(111)
-ax.scatter(xmat[:, 1], ymat.T, s=2, c='red')
-xcopy = xmat.copy()
-xcopy.sort(0)
-id = xmat[:, 1].argsort(0)
-ax.plot(xcopy[:, 1], yhat[id])
-plt.show()'''
-
-abx, aby = load_data_set('abalone.txt')
-yhat01 = lwlr_test(abx[100:199], abx[0:99], aby[0:99], 0.1)
-yhat1 = lwlr_test(abx[100:199], abx[0:99], aby[0:99], 1)
-yhat10 = lwlr_test(abx[100:199], abx[0:99], aby[0:99], 10)
-e01 = error(aby[100:199], yhat01.T)
-e1 = error(aby[100:199], yhat1.T)
-e10 = error(aby[100:199], yhat10.T)
-print(e01)
-print(e1)
-print(e10)
-ws = stand_regres(abx[0:99], aby[0:99])
-yhat = mat(abx[100:199]) * ws
-er = error(aby[100:199], yhat.T.A)
-print(er)
+ax.plot(ws)
+plt.show()

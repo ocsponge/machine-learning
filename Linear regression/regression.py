@@ -69,7 +69,7 @@ xcopy.sort(0)
 id = xmat[:, 1].argsort(0)
 ax.plot(xcopy[:, 1], yhat[id])
 plt.show()'''
-
+'''
 abx, aby = load_data_set('abalone.txt')
 yhat01 = lwlr_test(abx[100:199], abx[0:99], aby[0:99], 0.1)
 yhat1 = lwlr_test(abx[100:199], abx[0:99], aby[0:99], 1)
@@ -83,4 +83,14 @@ print(e10)
 ws = stand_regres(abx[0:99], aby[0:99])
 yhat = mat(abx[100:199]) * ws
 er = error(aby[100:199], yhat.T.A)
-print(er)
+print(er)'''
+xarr, yarr = load_data_set('abalone.txt')
+xmat = mat(xarr)
+ymat = mat(yarr).T
+ymean = mean(ymat, 0)
+ymat = ymat - ymean
+xmean = mean(xmat, 0)
+xvar = var(xmat, 0)
+xmat = (xmat - xmean) / xvar
+ws = stand_regres(xmat, ymat.T)
+print(ws.T)
