@@ -121,4 +121,3 @@ def handwriteclasstest():
     print('\nthe total number of errors is: %d' % errorcount)
     print('\nthe total error rate is: %f' % (errorcount / float(mtest)))
 
-handwriteclasstest()
