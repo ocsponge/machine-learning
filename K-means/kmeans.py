@@ -57,16 +57,16 @@ def bi_kmeans(data_mat, k, dist_meas=dist_eclud):
     cent_id0 = mean(data_mat, 0).tolist()[0]
     cent_list = [cent_id0]
     for i in range(m):
-        cluster_assment[i, 1] = dist_meas(data_mat[i, :], mat(cent_id0))
+        cluster_assment[i, 1] = dist_meas(data_mat[i, :], mat(cent_id0))**2
     while len(cent_list) < k:
         min_sse = inf
-        best_id = -1
         for j in range(len(cent_list)):
             pts_clust = data_mat[nonzero(cluster_assment[:, 0] == j)[0]]
             centj, clustj = kmeans(pts_clust, 2, dist_meas)
             sse_split = sum(clustj[:, 1])
             sse_nosplit = sum(
                 cluster_assment[nonzero(cluster_assment[:, 0] != j)[0], 1])
+            print('sse_split and sse_nosplit: ', sse_split, sse_nosplit)
             if (sse_split + sse_nosplit) < min_sse:
                 min_sse = sse_split + sse_nosplit
                 best_id = j
@@ -80,7 +80,7 @@ def bi_kmeans(data_mat, k, dist_meas=dist_eclud):
         cent_list.append(best_cent[1].tolist()[0])
         cluster_assment[nonzero(cluster_assment[:, 0] == best_id)[
             0]] = best_clust
-    return cent_list, cluster_assment
+    return mat(cent_list), cluster_assment
 
 
 data_mat = mat(load_data_set('testSet2.txt'))
@@ -88,6 +88,6 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.scatter(data_mat[:, 0], data_mat[:, 1], c='grey')
 cent, cluster = bi_kmeans(data_mat, 3)
-cent = mat(cent)
 ax.scatter(cent[:, 0], cent[:, 1], s=100, marker='^')
 plt.show()
+print(cent)
