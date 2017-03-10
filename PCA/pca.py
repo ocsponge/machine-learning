@@ -40,10 +40,12 @@ ax.scatter(data_mat[:, 0], data_mat[:, 1], marker='^', s=90)
 ax.scatter(lowdat[:, 0], lowdat[:, 1], marker='o', s=50, c='red')
 plt.show()
 '''
+
+
 data_mat = replace_nan()
 mean_vec = mean(data_mat, 0)
 mean_removed = data_mat - mean_vec
 covmat = cov(mean_removed, rowvar=0)
 eig_vals, eig_vecs = linalg.eig(mat(covmat))
 per = [val / sum(eig_vals) for val in eig_vals]
-print(per[19])
+print(eig_vals)
